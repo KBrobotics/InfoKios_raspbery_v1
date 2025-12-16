@@ -1,0 +1,264 @@
+[
+    {
+        "id": "f6f2187d.f17ca8",
+        "type": "tab",
+        "label": "InfoPoint System",
+        "disabled": false,
+        "info": "Flow obsługujący system InfoPoint RFID Kiosk.\n\n1. Obsługuje WebSocket na ścieżce /ws/rfid\n2. Symuluje sprzęt (karty RFID i przyciski)\n3. Odbiera dane o logowaniu pracowników i przygotowuje je dla InfluxDB"
+    },
+    {
+        "id": "ws-server-config",
+        "type": "websocket-listener",
+        "path": "/ws/rfid",
+        "wholemsg": "false"
+    },
+    {
+        "id": "ws-in",
+        "type": "websocket in",
+        "z": "f6f2187d.f17ca8",
+        "name": "Odbiór z App",
+        "server": "ws-server-config",
+        "client": "",
+        "x": 150,
+        "y": 340,
+        "wires": [
+            [
+                "json-parser",
+                "debug-raw"
+            ]
+        ]
+    },
+    {
+        "id": "ws-out",
+        "type": "websocket out",
+        "z": "f6f2187d.f17ca8",
+        "name": "Wyślij do App",
+        "server": "ws-server-config",
+        "client": "",
+        "x": 630,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "inject-rfid-1",
+        "type": "inject",
+        "z": "f6f2187d.f17ca8",
+        "name": "Karta: Jan Kowalski",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "RFID-001",
+        "payloadType": "str",
+        "x": 190,
+        "y": 60,
+        "wires": [
+            [
+                "ws-out"
+            ]
+        ]
+    },
+    {
+        "id": "inject-rfid-2",
+        "type": "inject",
+        "z": "f6f2187d.f17ca8",
+        "name": "Karta: Anna Nowak",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "RFID-002",
+        "payloadType": "str",
+        "x": 190,
+        "y": 100,
+        "wires": [
+            [
+                "ws-out"
+            ]
+        ]
+    },
+    {
+        "id": "inject-btn-green",
+        "type": "inject",
+        "z": "f6f2187d.f17ca8",
+        "name": "BTN_GREEN (Start)",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "BTN_GREEN",
+        "payloadType": "str",
+        "x": 190,
+        "y": 180,
+        "wires": [
+            [
+                "ws-out"
+            ]
+        ]
+    },
+    {
+        "id": "inject-btn-red",
+        "type": "inject",
+        "z": "f6f2187d.f17ca8",
+        "name": "BTN_RED (Stop)",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "BTN_RED",
+        "payloadType": "str",
+        "x": 190,
+        "y": 220,
+        "wires": [
+            [
+                "ws-out"
+            ]
+        ]
+    },
+    {
+        "id": "json-parser",
+        "type": "json",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "property": "payload",
+        "action": "",
+        "pretty": false,
+        "x": 350,
+        "y": 340,
+        "wires": [
+            [
+                "switch-topic"
+            ]
+        ]
+    },
+    {
+        "id": "switch-topic",
+        "type": "switch",
+        "z": "f6f2187d.f17ca8",
+        "name": "Filtr Tematów",
+        "property": "payload.topic",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "attendance",
+                "vt": "str"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 1,
+        "x": 520,
+        "y": 340,
+        "wires": [
+            [
+                "prep-influxdb",
+                "debug-attendance"
+            ]
+        ]
+    },
+    {
+        "id": "debug-attendance",
+        "type": "debug",
+        "z": "f6f2187d.f17ca8",
+        "name": "LOG: Obecność",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 760,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "prep-influxdb",
+        "type": "function",
+        "z": "f6f2187d.f17ca8",
+        "name": "Formatuj dla InfluxDB",
+        "func": "// Przygotowanie danych dla węzła InfluxDB\n// Wymaga zainstalowania: node-red-contrib-influxdb\n\nvar data = msg.payload.payload;\n\n// InfluxDB oczekuje obiektu lub tablicy\nmsg.measurement = \"work_logs\";\n\nmsg.payload = [\n    {\n        // Fields (Wartości)\n        action: data.action,\n        department: data.department,\n        employeeName: data.employeeName\n    },\n    {\n        // Tags (Indeksy - do szybkiego wyszukiwania)\n        employeeId: data.employeeId\n    }\n];\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 780,
+        "y": 380,
+        "wires": [
+            [
+                "debug-influx-ready"
+            ]
+        ]
+    },
+    {
+        "id": "debug-influx-ready",
+        "type": "debug",
+        "z": "f6f2187d.f17ca8",
+        "name": "GOTOWE DO DB",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1020,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "debug-raw",
+        "type": "debug",
+        "z": "f6f2187d.f17ca8",
+        "name": "RAW Data",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 350,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "comment-desc",
+        "type": "comment",
+        "z": "f6f2187d.f17ca8",
+        "name": "Instrukcja",
+        "info": "1. W sekcji 'Symulator Hardware' klikaj kwadratowe przyciski (Inject), aby symulować przyłożenie karty lub naciśnięcie guzika.\n2. W sekcji 'Odbiór Danych' zobaczysz logi, gdy w aplikacji webowej ktoś się zaloguje/wyloguje.\n3. Węzeł 'Formatuj dla InfluxDB' przygotowuje dane. Aby faktycznie zapisać w bazie, podłącz do niego węzeł 'influxdb out' z palety 'node-red-contrib-influxdb'.",
+        "x": 140,
+        "y": 20,
+        "wires": []
+    }
+]

@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  infopoint-kiosk:
+    build:
+      context: .
+      args:
+        # Przekazujemy klucz API do procesu budowania (Vite potrzebuje go w czasie build)
+        - API_KEY=PoTJPuT1fKV-I7rvclv6HwlWFjnXZuhC5dK-q69du8TXoVOA9nLPw23yNTTyc3YunLWNYfY_11KP-zU4_DZ8JQ==
+    container_name: infopoint_kiosk
+    restart: unless-stopped
+    ports:
+      # Mapujemy port 8081 hosta na port 80 kontenera (Nginx)
+      - "8081:80"
+    networks:
+      - kiosk-network
+
+networks:
+  kiosk-network:
+    driver: bridge

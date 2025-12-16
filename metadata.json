@@ -1,0 +1,5 @@
+{
+  "name": "InfoPoint RFID Kiosk",
+  "description": "A modern employee information system triggered by RFID cards, featuring AI-powered daily briefings and task management.",
+  "requestFramePermissions": []
+}
